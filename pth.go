@@ -67,6 +67,13 @@ func getEnv() bool {
 	return true
 }
 
+// Exists tests if the given path exists.
+func Exists(filePath string) bool {
+	filePath = AsRealPath(filePath)
+	_, err := os.Stat(filePath)
+	return !os.IsNotExist(err)
+}
+
 // set the numbered meta path for use with 'AsRealPath'
 func SetNumberedPath(n int, path string) {
 	dbg.ChkTruX(n < 10 && n >= 0, "Illegal path index (only 0..9)")
