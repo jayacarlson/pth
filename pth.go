@@ -67,12 +67,30 @@ func getEnv() bool {
 	return true
 }
 
+// cleanup a dir string, removing needless chars
+func cleanupDir(p string) string {
+	p = strings.ReplaceAll(p, "/./", "/")
+	p = strings.ReplaceAll(p, "//", "/")
+	t := len(p)
+	if t > 0 && '/' == p[t-1] {
+		p = p[:t-1]
+	}
+	return p
+}
+
+// Exists tests if the given path exists.
+func Exists(filePath string) bool {
+	filePath = AsRealPath(filePath)
+	_, err := os.Stat(filePath)
+	return !os.IsNotExist(err)
+}
+
 // set the numbered meta path for use with 'AsRealPath'
 func SetNumberedPath(n int, path string) {
 	dbg.ChkTruX(n < 10 && n >= 0, "Illegal path index (only 0..9)")
 	p := asReal(path)
 	if '/' != os.PathSeparator {
-		p = strings.Replace(p, "/", string(os.PathSeparator), -1)
+		p = strings.ReplaceAll(p, "/", string(os.PathSeparator))
 	}
 	numberedPaths[n] = p
 }
@@ -86,7 +104,7 @@ func SetNumberedPath(n int, path string) {
 */
 func AsRealPath(l ...string) string {
 	p := asReal(strings.Join(l, "/"))
-	p = strings.Replace(p, "/./", "/", -1)
+	p = cleanupDir(p)
 	if '/' != os.PathSeparator {
 		p = strings.Replace(p, "/", string(os.PathSeparator), -1)
 	}
@@ -97,7 +115,7 @@ func AsRealPath(l ...string) string {
 func MakePath(path string) error {
 	p := asReal(path)
 	if '/' != os.PathSeparator {
-		p = strings.Replace(p, "/", string(os.PathSeparator), -1)
+		p = strings.ReplaceAll(p, "/", string(os.PathSeparator))
 	}
 	return os.MkdirAll(p, 0775)
 }
@@ -112,6 +130,7 @@ func Ext(srcPath string) string {
 //	NOTE: if there is no .extention, the 'file' may be the last dir in a path
 func Split(src string) (dir, file, ext string) {
 	dir, file = path.Split(src)
+	dir = cleanupDir(dir)
 	ext = path.Ext(src)
 	file = file[:len(file)-len(ext)]
 	return
@@ -127,6 +146,32 @@ func Join(dir, file, ext string) string {
 		}
 	}
 	return path.Join(dir, file+ext)
+}
+
+// returns a path with home '~' if it can
+func Homify(p string) string {
+	p = AsRealPath(p)
+	if len(p) >= len(paths.Home) {
+		l := len(paths.Home)
+		if p[:l] == paths.Home {
+			return "~" + p[l:]
+		}
+	}
+	return p
+}
+
+func PathToFilename(p string) string {
+	p = strings.ReplaceAll(Homify(p), string(os.PathSeparator), "@")
+	if '@' == p[len(p)-1] {
+		p = p[:len(p)-1]
+	}
+	if 2 < len(p) && "~@" == p[:2] {
+		p = "~" + p[1:]
+	}
+	//if '~' == p[0] {
+	//	p = "-" + p[1:]
+	//}
+	return p
 }
 
 func asReal(p string) string {
@@ -160,5 +205,6 @@ func asReal(p string) string {
 	} else if p[0] == '^' {
 		return path.Join(paths.GoPath, p[1:])
 	}
+	// to test on Windows, is this returning os normalized paths?  c:/foo/bar => c:\foo\bar
 	return path.Join(p)
 }
