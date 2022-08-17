@@ -5,6 +5,7 @@ import (
 	"path"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/jayacarlson/dbg"
 	"github.com/jayacarlson/env"
@@ -172,6 +173,10 @@ func PathToFilename(p string) string {
 	//	p = "-" + p[1:]
 	//}
 	return p
+}
+
+func TimeBasedFilename(t time.Time) string {
+	return strings.ReplaceAll(t.Format("2006-01-02@15-04-05"), ".", "_")
 }
 
 func asReal(p string) string {
